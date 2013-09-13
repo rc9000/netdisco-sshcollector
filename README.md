@@ -25,14 +25,8 @@ database.
  
 
     Data is collected from the machines specified in this file. The 
-    format is five tab-separated columns, e.g.
-
-        hostname	ipaddress	user	password	devicetype
-        host1	10.0.0.1	bob	$ecret77	BigIP
-        -	        10.0.1.5	alice	-	        ACE
-        
-
-
+    format is five tab-separated columns: hostname, ipaddress, 
+    username, password, devicetpye.
 
     Devicetype is the final part of the classname to be instantiated
     to query the host. 
@@ -55,6 +49,15 @@ database.
     Number of parallel processes launched by Net::OpenSSH::Parallel.
 
     Parameter defaults to 10.
+
+# INPUT FILE EXAMPLE
+
+    #hostname	ipaddress	user	password	devicetype
+    host1	        10.0.0.1	bob	$ecret77	BigIP
+    -              10.0.1.5	alice	-	        ACE
+    
+
+
 
 # ADDING DEVICES
 
