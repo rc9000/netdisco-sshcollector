@@ -1,7 +1,3 @@
-# Documentation generated from POD in bin/netdisco-sshcollector
-*****
-
-
 # NAME
 
 netdisco-sshcollector - Collect ARP data for Netdisco from devices 
@@ -25,15 +21,16 @@ database.
 
 # USAGE
 
-- __\-i inputfile__ 
+- `-i inputfile` 
  
 
     Data is collected from the machines specified in this file. The 
     format is five tab-separated columns, e.g.
 
-        #hostname	ipaddress	user	password	devicetype
+        hostname	ipaddress	user	password	devicetype
         host1	10.0.0.1	bob	$ecret77	BigIP
         -	        10.0.1.5	alice	-	        ACE
+        
 
 
 
@@ -45,7 +42,7 @@ database.
 
     Parameter defaults to ../etc/netdisco-sshcollector-hosts.csv. 
 
-- __\-c netdisco\_config__
+- `-c netdisco_config`
 
     Used to find the database of the local netdisco installation.
 
@@ -53,7 +50,7 @@ database.
 
 
 
-- __\-w workers__
+- `-w workers`
 
     Number of parallel processes launched by Net::OpenSSH::Parallel.
 
@@ -70,44 +67,18 @@ an array of hashrefs in the format
 
 # DEPENDENCIES
 
-- __Cache::Cache__
-- __Net::OpenSSH__
-- __Net::OpenSSH::Parallel__
-- __netdisco.pm__
+- `Cache::Cache`
+- `Net::OpenSSH`
+- `Net::OpenSSH::Parallel`
+- `netdisco.pm`
 
-The first three modules can be obtained from CPAN, while 
-netdisco.pm comes with the netdisco installation.
+The first three modules can be obtained from CPAN. Alternatively if you
+can't use CPAN and your distro doesn't provide these packages, 
+
+The module netdisco.pm comes with the netdisco installation.
 
 It is likely necessary to add the netdisco base directory 
 (containing netdisco and netdisco.pm) to PERLLIB or the
 __use lib__ statement.
 
 
-
-# Documentation generated from POD in lib/Netdisco/SSHCollector/Devices/BigIP.pm
-*****
-
-
-# NAME
-
-Netdisco::SSHCollector::Devices::BigIP
-
-# DESCRIPTION
-
-Collect ARP entries from F5 BigIP load balancers. These are Linux boxes, 
-but feature an additional, proprietary IP stack which does not show 
-up in the standard SNMP ipNetToMediaTable.
-
-These devices also feature a CLI interface similar to IOS, which can
-either be set as the login shell of the user, or be called from an 
-ordinary shell. This module assumes the former, and if "show net arp"
-can't be executed, falls back to the latter.   
-
-# PUBLIC METHODS
-
-- __arpnip($host, $ssh)__
-
-    Retrieve ARP entries from device. `$host` is the hostname or IP address
-    of the device. `$ssh` is a Net::OpenSSH connection to the device.
-
-    Returns an array of hashrefs in the format { mac => MACADDR, ip => IPADDR }.
