@@ -26,7 +26,8 @@ database.
 
     Data is collected from the machines specified in this file. The 
     format is five tab-separated columns: hostname, ipaddress, 
-    username, password, devicetpye.
+    username, password, devicetpye. Blank lines and lines with a 
+    leading \# are ignored.
 
     Devicetype is the final part of the classname to be instantiated
     to query the host. 
@@ -53,11 +54,8 @@ database.
 # INPUT FILE EXAMPLE
 
     #hostname	ipaddress	user	password	devicetype
-    host1	        10.0.0.1	bob	$ecret77	BigIP
-    -              10.0.1.5	alice	-	        ACE
-    
-
-
+    host1	10.0.0.1	bob	$ecret77	BigIP
+    -	10.0.1.5	alice	-	ACE
 
 # ADDING DEVICES
 
