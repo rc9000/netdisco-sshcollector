@@ -79,3 +79,26 @@ It is likely necessary to add the netdisco base directory
 __use lib__ statement.
 
 
+# NAME
+
+Netdisco::SSHCollector::Devices::BigIP
+
+# DESCRIPTION
+
+Collect ARP entries from F5 BigIP load balancers. These are Linux boxes, 
+but feature an additional, proprietary IP stack which does not show 
+up in the standard SNMP ipNetToMediaTable.
+
+These devices also feature a CLI interface similar to IOS, which can
+either be set as the login shell of the user, or be called from an 
+ordinary shell. This module assumes the former, and if "show net arp"
+can't be executed, falls back to the latter.   
+
+# PUBLIC METHODS
+
+- __arpnip($host, $ssh)__
+
+    Retrieve ARP entries from device. `$host` is the hostname or IP address
+    of the device. `$ssh` is a Net::OpenSSH connection to the device.
+
+    Returns an array of hashrefs in the format { mac => MACADDR, ip => IPADDR }.
