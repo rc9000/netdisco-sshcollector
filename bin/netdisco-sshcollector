@@ -19,9 +19,9 @@ following device classes:
 
 =over 4
 
-=item * Cisco ACE using C<Netdisco::SSHCollector::Devices::ACE>
+=item * C<Netdisco::SSHCollector::Devices::ACE> - Cisco ACE (Application Control Engine) 
 
-=item * F5 BigIP using C<Netdisco::SSHCollector::Devices::BigIP>
+=item * C<Netdisco::SSHCollector::Devices::BigIP> - F5 Networks BigIP
 
 =back
 
@@ -40,7 +40,9 @@ username, password, devicetpye. Blank lines and lines with a
 leading # are ignored.
 
 Devicetype is the final part of the classname to be instantiated
-to query the host.
+to query the host, e.g. devicetype B<ACE> will be queried using 
+C<Netdisco::SSHCollector::Devices::ACE>.
+
 If the hostname is "-", the SSH session will be established using the
 ip address.
 If the password is "-", public key authentication will be attempted.
@@ -71,11 +73,33 @@ Parameter defaults to 10.
 =head1 ADDING DEVICES
 
 Additional device classes can be easily integrated just by adding
-and additonal Netdisco::SSHCollector::Devices class. This class
-must implement an C<arpnip($hostname, $ssh)> method which returns
-an array of hashrefs in the format
+and additonal class to the C<Netdisco::SSHCollector::Devices> package. 
+This class must implement an C<arpnip($hostname, $ssh)> method which 
+returns an array of hashrefs in the format
 
    @result = ({ ip => IPADDR, mac => MACADDR }, ...) 
+
+The parameter C<$ssh> is an active C<Net::OpenSSH> connection to the 
+host. Depending on the target system, it can be queried using simple
+methods like
+
+   my @data = $ssh->capture("show whatever")
+or automated via Expect - this is mostly useful for non-Linux 
+appliances which don't support command execution via ssh:
+
+    my ($pty, $pid) = $ssh->open2pty or die "unable to run remote command";
+    my $expect = Expect->init($pty);
+    my $prompt = qr/#/;
+    my ($pos, $error, $match, $before, $after) = $expect->expect(10, -re, $prompt);
+    $expect->send("terminal length 0\n");
+
+    # etc...
+
+The returned IP and MAC addresses should be in a format that the 
+respective B<inetaddr> and B<macaddr> datatypes in PostgreSQL can
+handle.   
+
+
 
 =head1 DEPENDENCIES
 
@@ -91,7 +115,7 @@ an array of hashrefs in the format
 
 =item C<Sys::RunAlone>
 
-=item C<netdisco.pm>
+=item C<netdisco>
 
 =back
 
