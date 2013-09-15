@@ -1,8 +1,10 @@
 #!/usr/bin/perl
 
+# vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4:
+
 =head1 NAME
 
-netdisco-sshcollector - Collect ARP data for Netdisco from devices 
+netdisco-sshcollector - Collect ARP data for Netdisco from devices
 without full SNMP support
 
 =head1 SYNOPSIS
@@ -11,11 +13,11 @@ without full SNMP support
 
 =head1 DESCRIPTION
 
-This program collects ARP data for Netdisco from devices without 
-full SNMP support. Currently, ARP tables can be retrieved from the 
-following device classes: 
+This program collects ARP data for Netdisco from devices without
+full SNMP support. Currently, ARP tables can be retrieved from the
+following device classes:
 
-=over 4 
+=over 4
 
 =item * Cisco ACE using Netdisco::SSHCollector::Devices::ACE
 
@@ -23,38 +25,38 @@ following device classes:
 
 =back
 
-The collected arp entries are then directly stored in the netdisco 
+The collected arp entries are then directly stored in the netdisco
 database.
 
 =head1 USAGE
 
-=over 4 
+=over 4
 
-=item C<-i inputfile> 
- 
-Data is collected from the machines specified in this file. The 
-format is five tab-separated columns: hostname, ipaddress, 
-username, password, devicetpye. Blank lines and lines with a 
+=item C<-i inputfile>
+
+Data is collected from the machines specified in this file. The
+format is five tab-separated columns: hostname, ipaddress,
+username, password, devicetpye. Blank lines and lines with a
 leading # are ignored.
 
 Devicetype is the final part of the classname to be instantiated
-to query the host. 
+to query the host.
 If the hostname is "-", the SSH session will be established using the
 ip address.
 If the password is "-", public key authentication will be attempted.
 
-Parameter defaults to ../etc/netdisco-sshcollector-hosts.csv. 
+Parameter defaults to ../etc/netdisco-sshcollector-hosts.csv.
 
 =item C<-c netdisco_config>
 
 Used to find the database of the local netdisco installation.
 
-Parameter defaults to /usr/share/netdisco/netdisco.conf. 
+Parameter defaults to /usr/share/netdisco/netdisco.conf.
 
 
 =item C<-w workers>
 
-Number of parallel processes launched by Net::OpenSSH::Parallel.
+Number of parallel processes launched. 
 
 Parameter defaults to 10.
 
@@ -62,56 +64,76 @@ Parameter defaults to 10.
 
 =head1 INPUT FILE EXAMPLE
 
- #hostname	ipaddress	user	password	devicetype
- host1	10.0.0.1	bob	$ecret77	BigIP
- -	10.0.1.5	alice	-	ACE
+ #hostname      ipaddress       user    password        devicetype
+ host1  10.0.0.1        bob     $ecret77        BigIP
+ -      10.0.1.5        alice   -       ACE
 
 =head1 ADDING DEVICES
 
 Additional device classes can be easily integrated just by adding
-and additonal Netdisco::SSHCollector::Devices class. This class 
+and additonal Netdisco::SSHCollector::Devices class. This class
 must implement an C<arpnip($hostname, $ssh)> method which returns
 an array of hashrefs in the format
 
-   { ip => IPADDR, mac => MACADDR }
+   @result = ({ ip => IPADDR, mac => MACADDR }, ...) 
+
 
 =head1 DEPENDENCIES
 
-=over 4 
+=over 4
 
 =item C<Cache::Cache>
 
 =item C<Net::OpenSSH>
 
-=item C<Net::OpenSSH::Parallel>
+=item C<Module::Load>
+
+ This is a CORE module in Perl 5.9 and newer. 
+
+=item C<Parallel::ForkManager>
+
+=item C<Sys::RunAlone>
 
 =item C<netdisco.pm>
 
 =back
 
-The first three modules can be obtained from CPAN. Alternatively if you
-can't use CPAN and your distro doesn't provide these packages, 
+The non-netdisco modules can be obtained from CPAN. Alternatively if you
+can't use CPAN and your distro doesn't provide these packages, you can
+add the C<cpanlib> directory to C<PERLLIB>, it contains fairly recent
+versions of all dependencies. These are all pure Perl modules which
+should work on any platform.
 
 The module netdisco.pm comes with the netdisco installation.
 
-It is likely necessary to add the netdisco base directory 
+It is likely necessary to add the netdisco base directory
 (containing netdisco and netdisco.pm) to PERLLIB or the
 B<use lib> statement.
 
 
 =cut
 
-use lib qw(../lib ./lib /appl/netdisco /opt/netdisco);
 use warnings;
 use strict;
 
+use FindBin;
+use lib (
+    "$FindBin::Bin/../",
+    "$FindBin::Bin/../lib",
+    "$FindBin::Bin/../git/perllib"
+);
+
 use Cache::FileCache;
-use Net::OpenSSH::Parallel;
 use Data::Dumper;
 use Getopt::Long;
+use Module::Load;
+use Net::OpenSSH;
+use Parallel::ForkManager;
+use Sys::RunAlone;
 use netdisco qw(config add_arp sql_begin sql_commit);
 
-use Netdisco::SSHCollector::Devices::BigIP; 
+#this may be helpful with SSH issues:
+#$Net::OpenSSH::debug = ~0;
 
 my $namespace = "netdisco-sshcollector";
 my $oconfig = "/usr/share/netdisco/netdisco.conf";
@@ -132,43 +154,66 @@ sub main {
     die "Can't read netdisco config: $oconfig" unless (-r $oconfig);
     die "Can't read input file: $oinput" unless (-r $oinput);
 
-    my $pssh = Net::OpenSSH::Parallel->new(
-        workers => $oworkers, connections => $oworkers
-    );
-
     $cache->clear;
     my @input = readinput();
 
+    my $pm = Parallel::ForkManager->new($oworkers);
+
     foreach my $host (@input){
-        print Dumper ($host) ;
-        $pssh->add_host($host->{hostname}, 
-            user => $host->{user}, 
-            password => $host->{password} eq "-" ? undef : $host->{password}, 
-            vars => {devicetype => $host->{devicetype}},
-            master_opts => [
-                -o => "StrictHostKeyChecking=no",
-                -o => "BatchMode=yes"]
+        print Dumper $host;
+
+        my $pid = $pm->start and next;
+        print "pm loop $$\n";
+
+        my $ssh = Net::OpenSSH->new(
+                $host->{hostname},
+                user => $host->{user},
+                password => $host->{password},
+                timeout => 30,
+                async => 0,
+                master_opts => [
+                        -o => "StrictHostKeyChecking=no",
+                        -o => "BatchMode=no"
+                ],
         );
+
+        process($host->{hostname}, $ssh, $host);
+        $pm->finish;
+
     }
 
-    $pssh->push('*', parsub => \&process);
-    $pssh->run;
-    
-    for my $host (@input){
-        my $arpentries = $cache->get($host->{hostname});
-        print $host->{hostname} . ": " .@${arpentries}. " entries obtained\n";
+    $pm->wait_all_children;
+
+    print "after finish $$\n";
+
+    for my $host ($cache->get_keys()){
+        my $arpentries = $cache->get($host);
+        print $host . ": " .@${arpentries}. " entries obtained\n";
         store_arpentries($arpentries);
     }
+
+    return 0;
 }
 
 sub process {
 
-    my ($hostlabel, $ssh, @args) = @_; 
+    my ($hostlabel, $ssh, $args) = @_;
 
-    my $class = "Netdisco::SSHCollector::Devices::".$ssh->get_var("devicetype");
+    my $class = "Netdisco::SSHCollector::Devices::".$args->{devicetype};
+    load $class;
+
     my $device = $class->new();
-    my @arpentries = $device->arpnip($hostlabel, $ssh, @args);
-    $cache->set("$hostlabel", \@arpentries)
+    my @arpentries = $device->arpnip($hostlabel, $ssh, $args);
+
+    print Dumper \@arpentries;
+
+    if (@arpentries){
+        print "set $hostlabel\n";
+        $cache->set("$hostlabel", \@arpentries)
+    }else{
+        print STDERR "WARNING: no entries received from <$hostlabel>\n";
+
+    }
 
 }
 
@@ -184,6 +229,9 @@ sub store_arpentries {
         # skip broadcast/vrrp/hsrp and other wierdos
         next if $arpentry->{mac} =~ /^(ff:ff:ff:ff:ff:ff|0:0:5e:0|0:0:c:7:ac)/i;
 
+        # normalize separator to ":"
+        $arpentry->{mac} =~ s/\./:/g;
+
         print "Entry: " . $arpentry->{mac} . " " .  $arpentry->{ip} . "\n";
         add_arp($arpentry->{mac}, $arpentry->{ip});
     }
@@ -197,16 +245,29 @@ sub readinput {
     my @input;
 
     while(<INPUT>){
-        next if m/^(#|$)/; 
+        next if m/^(#|$)/;
         chomp;
         my ($hostname, $ip, $user, $password, $devicetype) = split(/\t/);
-        push(@input, {
-                hostname => $hostname eq "-" ? $ip : $hostname, 
-                ip => $ip, 
-                user => $user, password => $password, 
-                devicetype => $devicetype}
-        );
+
+        if ($devicetype){
+
+            push(@input, {
+                    hostname => $hostname eq "-" ? $ip : $hostname,
+                    ip => $ip,
+                    user => $user, password => $password,
+                    devicetype => $devicetype}
+            );
+        }else{
+            print STDERR "WARNING: illegal input record: $_\n";
+        }
+    }
+
+    unless(@input){
+        die "No valid records in input file $oinput" ;
     }
 
     return @input;
 }
+
+__END__
+

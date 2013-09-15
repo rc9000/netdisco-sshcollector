@@ -1,21 +1,23 @@
 package Netdisco::SSHCollector::Devices::BigIP;
 
+# vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4:
+
 =head1 NAME
 
 Netdisco::SSHCollector::Devices::BigIP
 
 =head1 DESCRIPTION
 
-Collect ARP entries from F5 BigIP load balancers. These are Linux boxes, 
-but feature an additional, proprietary IP stack which does not show 
+Collect ARP entries from F5 BigIP load balancers. These are Linux boxes,
+but feature an additional, proprietary IP stack which does not show
 up in the standard SNMP ipNetToMediaTable.
 
 These devices also feature a CLI interface similar to IOS, which can
-either be set as the login shell of the user, or be called from an 
+either be set as the login shell of the user, or be called from an
 ordinary shell. This module assumes the former, and if "show net arp"
-can't be executed, falls back to the latter.   
+can't be executed, falls back to the latter.
 
-=cut 
+=cut
 
 use strict;
 use warnings;
@@ -31,7 +33,7 @@ sub new {
 
 =head1 PUBLIC METHODS
 
-=over 4 
+=over 4
 
 =item B<arpnip($host, $ssh)>
 
@@ -54,19 +56,19 @@ sub arpnip {
 
     chomp @data;
     my @arpentries;
-    print Dumper @data;
-    foreach (@data){
-	if (m/\d{1,3}\..*resolved/){
-	    my (undef, $ip, $mac) = split(/\s+/);
 
-            # ips can look like 172.19.254.143%10, clean 
+    foreach (@data){
+        if (m/\d{1,3}\..*resolved/){
+            my (undef, $ip, $mac) = split(/\s+/);
+
+            # ips can look like 172.19.254.143%10, clean
             $ip =~ s/%\d+//;
 
-	    push(@arpentries, {mac => $mac, ip => $ip});
-	} 
+            push(@arpentries, {mac => $mac, ip => $ip});
+        }
     }
 
-    return @arpentries;  
+    return @arpentries;
 
 }
 
