@@ -13,8 +13,8 @@ This program collects ARP data for Netdisco from devices without
 full SNMP support. Currently, ARP tables can be retrieved from the
 following device classes:
 
-- Cisco ACE using Netdisco::SSHCollector::Devices::ACE
-- F5 BigIP using Netdisco::SSHCollector::Devices::BigIP
+- Cisco ACE using `Netdisco::SSHCollector::Devices::ACE`
+- F5 BigIP using `Netdisco::SSHCollector::Devices::BigIP`
 
 The collected arp entries are then directly stored in the netdisco
 database.
@@ -65,15 +65,11 @@ an array of hashrefs in the format
 
     @result = ({ ip => IPADDR, mac => MACADDR }, ...) 
 
-
-
 # DEPENDENCIES
 
 - `Cache::Cache`
 - `Net::OpenSSH`
 - `Module::Load`
-
-        This is a CORE module in Perl 5.9 and newer. 
 - `Parallel::ForkManager`
 - `Sys::RunAlone`
 - `netdisco.pm`
