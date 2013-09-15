@@ -140,6 +140,8 @@ the same context.
     of the device. `$ssh` is a Net::OpenSSH connection to the device.
 
     Returns an array of hashrefs in the format { mac => MACADDR, ip => IPADDR }.
+
+
 ***
 # POD of module lib/Netdisco/SSHCollector/Devices/BigIP.pm
 ***
@@ -166,3 +168,5 @@ can't be executed, falls back to the latter.
     of the device. `$ssh` is a Net::OpenSSH connection to the device.
 
     Returns an array of hashrefs in the format { mac => MACADDR, ip => IPADDR }.
+
+
