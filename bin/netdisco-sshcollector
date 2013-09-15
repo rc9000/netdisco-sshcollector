@@ -19,9 +19,9 @@ following device classes:
 
 =over 4
 
-=item * Cisco ACE using Netdisco::SSHCollector::Devices::ACE
+=item * Cisco ACE using C<Netdisco::SSHCollector::Devices::ACE>
 
-=item * F5 BigIP using Netdisco::SSHCollector::Devices::BigIP
+=item * F5 BigIP using C<Netdisco::SSHCollector::Devices::BigIP>
 
 =back
 
@@ -77,7 +77,6 @@ an array of hashrefs in the format
 
    @result = ({ ip => IPADDR, mac => MACADDR }, ...) 
 
-
 =head1 DEPENDENCIES
 
 =over 4
@@ -87,8 +86,6 @@ an array of hashrefs in the format
 =item C<Net::OpenSSH>
 
 =item C<Module::Load>
-
- This is a CORE module in Perl 5.9 and newer. 
 
 =item C<Parallel::ForkManager>
 
@@ -160,13 +157,12 @@ sub main {
     my $pm = Parallel::ForkManager->new($oworkers);
 
     foreach my $host (@input){
-        print Dumper $host;
 
         my $pid = $pm->start and next;
-        print "pm loop $$\n";
+        my $hostlabel = $host->{hostname} eq "-" ? $host->{ip} : $host->{hostname};
 
         my $ssh = Net::OpenSSH->new(
-                $host->{hostname},
+                $hostlabel,
                 user => $host->{user},
                 password => $host->{password},
                 timeout => 30,
@@ -177,7 +173,7 @@ sub main {
                 ],
         );
 
-        process($host->{hostname}, $ssh, $host);
+        process($hostlabel, $ssh, $host);
         $pm->finish;
 
     }
