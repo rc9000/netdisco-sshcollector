@@ -132,7 +132,18 @@ It is likely necessary to add the netdisco base directory
 B<use lib> statement.
 
 
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2013 by Christian Ramseyer (ramseyer@netnea.com)
+
+This library is free software; you can redistribute it and/or modify it under 
+the same terms as Perl itself, either Perl version 5.10.0 or, at your option, 
+any later version of Perl 5 you may have available.
+
 =cut
+
+
 
 use warnings;
 use strict;
@@ -161,6 +172,8 @@ my $oconfig = "/usr/share/netdisco/netdisco.conf";
 my $oinput = "../etc/netdisco-sshcollector-hosts.csv";
 my $oworkers = 10;
 my $cache = Cache::FileCache->new({namespace => $namespace});
+
+my %stats;
 
 exit main();
 
@@ -204,13 +217,14 @@ sub main {
 
     $pm->wait_all_children;
 
-    print "after finish $$\n";
-
     for my $host ($cache->get_keys()){
+        $stats{host}++;
         my $arpentries = $cache->get($host);
         print $host . ": " .@${arpentries}. " entries obtained\n";
         store_arpentries($arpentries);
     }
+
+    print "Collected ", $stats{entry}, " arp entries from ", $stats{host}, " hosts\n";
 
     return 0;
 }
@@ -225,10 +239,9 @@ sub process {
     my $device = $class->new();
     my @arpentries = $device->arpnip($hostlabel, $ssh, $args);
 
-    print Dumper \@arpentries;
+    #print Dumper \@arpentries;
 
     if (@arpentries){
-        print "set $hostlabel\n";
         $cache->set("$hostlabel", \@arpentries)
     }else{
         print STDERR "WARNING: no entries received from <$hostlabel>\n";
@@ -254,6 +267,8 @@ sub store_arpentries {
 
         print "Entry: " . $arpentry->{mac} . " " .  $arpentry->{ip} . "\n";
         add_arp($arpentry->{mac}, $arpentry->{ip});
+
+        $stats{entry}++;
     }
 
     sql_commit();
