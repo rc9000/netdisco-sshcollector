@@ -113,6 +113,16 @@ It is likely necessary to add the netdisco base directory
 __use lib__ statement.
 
 
+
+
+
+# COPYRIGHT AND LICENSE
+
+Copyright (C) 2013 by Christian Ramseyer (ramseyer@netnea.com)
+
+This library is free software; you can redistribute it and/or modify it under 
+the same terms as Perl itself, either Perl version 5.10.0 or, at your option, 
+any later version of Perl 5 you may have available.
 ***
 # POD of module lib/Netdisco/SSHCollector/Devices/ACE.pm
 ***
