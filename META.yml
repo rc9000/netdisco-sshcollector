@@ -1,0 +1,29 @@
+---
+abstract: ~
+author:
+  - 'Christian Ramseyer (ramseyer@netnea.com)'
+build_requires:
+  ExtUtils::MakeMaker: 6.36
+configure_requires:
+  ExtUtils::MakeMaker: 6.36
+distribution_type: module
+dynamic_config: 1
+generated_by: 'Module::Install version 1.06'
+license: artistic
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: netdisco-sshcollector
+no_index:
+  directory:
+    - inc
+requires:
+  App::Netdisco: 0
+  Net::OpenSSH: 0
+  Sys::RunAlone: 0
+resources:
+  bugtracker: https://github.com/ollyg/netdisco-sshcollector/issues
+  homepage: https://github.com/ollyg/netdisco-sshcollector
+  license: http://opensource.org/licenses/artistic-license.php
+  repository: git@github.com/netdisco-sshcollector.git
+version: 2.001

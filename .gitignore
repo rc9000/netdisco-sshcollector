@@ -1,0 +1,7 @@
+netdisco-sshcollector-*
+*.swp
+*.pid
+test.pl
+MYMETA.*
+*.tar.gz
+MANIFEST.*

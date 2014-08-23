@@ -1,0 +1,17 @@
+bin/netdisco-sshcollector
+inc/Module/Install.pm
+inc/Module/Install/Base.pm
+inc/Module/Install/Can.pm
+inc/Module/Install/Fetch.pm
+inc/Module/Install/Makefile.pm
+inc/Module/Install/Metadata.pm
+inc/Module/Install/Scripts.pm
+inc/Module/Install/Win32.pm
+inc/Module/Install/WriteAll.pm
+lib/Netdisco/SSHCollector/Devices/ACE.pm
+lib/Netdisco/SSHCollector/Devices/BigIP.pm
+lib/Netdisco/SSHCollector/Devices/IOS.pm
+Makefile.PL
+MANIFEST			This list of files
+META.yml
+README.pod

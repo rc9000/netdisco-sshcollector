@@ -1,5 +1,0 @@
-# tab-separated input file for netdisco-sshcollector, fields:
-# hostname  ip	user	password    devicetype
-lab-lb-test.nms.admin.ch	10.1.254.15	admin	-	BigIP
-ace1.example.com	10.1.254.16	admin	blobby	ACE
-

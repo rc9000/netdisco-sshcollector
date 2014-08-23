@@ -91,8 +91,6 @@ B<inetaddr> and B<macaddr> datatypes in PostgreSQL can handle.
 
 =item L<Net::OpenSSH>
 
-=item L<Parallel::ForkManager>
-
 =item L<Sys::RunAlone>
 
 =back
@@ -113,6 +111,7 @@ http://dev.perl.org/licenses/artistic.html
 use warnings;
 use strict;
 
+our $VERSION = 2.001000;
 our $home;
 
 BEGIN {
