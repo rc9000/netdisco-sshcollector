@@ -158,6 +158,9 @@ BEGIN {
     dir($FindBin::RealBin)->parent->subdir('lib')->stringify,
     dir($FindBin::RealBin, 'lib')->stringify;
 
+  unshift @INC,
+    split m/:/, ($ENV{NETDISCO_INC} || '');
+
   use Config;
   $ENV{PATH} = $FindBin::RealBin . $Config{path_sep} . $ENV{PATH};
 }
