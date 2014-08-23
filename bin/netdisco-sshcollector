@@ -165,6 +165,7 @@ BEGIN {
 use App::Netdisco;
 use App::Netdisco::Core::Arpnip 'store_arp';
 use App::Netdisco::Util::Node 'check_mac';
+use App::Netdisco::Util::DNS 'hostnames_resolve_async';
 use Dancer ':script';
 
 use Cache::FileCache;
@@ -220,12 +221,12 @@ sub main {
     foreach my $host ($cache->get_keys()){
         $stats{host}++;
         my $arpentries = $cache->get($host);
-        debug sprintf ' [%s] arpnip - retrieved %s entries from %s',
-           scalar @$arpentries, $host;
+        debug sprintf ' [%s] arpnip - retrieved %s entries',
+           $host, scalar @$arpentries;
         store_arpentries($arpentries);
     }
 
-    info sprintf ' [%s] arpnip - processed %s ARP Cache entries',
+    info sprintf ' [id: %s] arpnip - processed %s ARP Cache entries',
         $stats{host}, $stats{entry};
     return 0;
 }
@@ -237,11 +238,12 @@ sub process {
     Module::Load::load $class;
 
     my $device = $class->new();
-    my @arpentries = $device->arpnip($hostlabel, $ssh, $args);
+    my $arpentries = [ $device->arpnip($hostlabel, $ssh, $args) ];
 
-    debug p @arpentries;
-    if (@arpentries) {
-        $cache->set($hostlabel, \@arpentries)
+    debug p $arpentries;
+    if (scalar @$arpentries) {
+        $arpentries = hostnames_resolve_async($arpentries);
+        $cache->set($hostlabel, $arpentries)
     }
     else {
         warning "WARNING: no entries received from <$hostlabel>";
@@ -257,7 +259,7 @@ sub store_arpentries {
         next unless check_mac( undef, $arpentry->{mac} );
 
         debug sprintf 'arpnip - stored entry: %s / %s', $arpentry->{mac}, $arpentry->{ip};
-        store_arp({ node => $arpentry->{mac}, ip => $arpentry->{ip} });
+        store_arp({ node => $arpentry->{mac}, ip => $arpentry->{ip}, dns => $arpentry->{dns} });
 
         $stats{entry}++;
     }
