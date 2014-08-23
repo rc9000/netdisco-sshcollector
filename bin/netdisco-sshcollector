@@ -210,12 +210,14 @@ sub main {
     GetOptions( "workers=i" => \$oworkers );
     $cache->clear;
 
-    my @input = setting('sshcollector');
+    my @input = @{ setting('sshcollector') };
     my $pm = Parallel::ForkManager->new($oworkers);
 
     foreach my $host (@input) {
+        my $hostlabel = (!defined $host->{hostname} or $host->{hostname} eq "-")
+            ? $host->{ip} : $host->{hostname};
+        next unless $hostlabel;
         my $pid = $pm->start and next;
-        my $hostlabel = $host->{hostname} eq "-" ? $host->{ip} : $host->{hostname};
 
         my $ssh = Net::OpenSSH->new(
             $hostlabel,
@@ -234,8 +236,9 @@ sub main {
     }
 
     $pm->wait_all_children;
+    return 0 unless $cache->get_keys();
 
-    for my $host ($cache->get_keys()){
+    foreach my $host ($cache->get_keys()){
         $stats{host}++;
         my $arpentries = $cache->get($host);
         debug sprintf ' [%s] arpnip - retrieved %s entries from %s',
@@ -272,9 +275,9 @@ sub store_arpentries {
 
     foreach my $arpentry ( @$arpentries ) {
         # skip broadcast/vrrp/hsrp and other wierdos
-        next unless check_mac( $arpentry->{mac} );
+        next unless check_mac( undef, $arpentry->{mac} );
 
-        debug sprintf 'arpnip - stored entry: %s/%s', $arpentry->{mac}, $arpentry->{ip};
+        debug sprintf 'arpnip - stored entry: %s / %s', $arpentry->{mac}, $arpentry->{ip};
         store_arp({ node => $arpentry->{mac}, ip => $arpentry->{ip} });
 
         $stats{entry}++;
