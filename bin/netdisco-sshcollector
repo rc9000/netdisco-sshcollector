@@ -4,18 +4,13 @@
 
 =head1 NAME
 
-netdisco-sshcollector - Collect ARP data for Netdisco from devices
-without full SNMP support
-
-=head1 SYNOPSIS
-
-    netdisco-sshcollector [-w workers]
+netdisco-sshcollector - Collect ARP data for Netdisco from devices without
+full SNMP support
 
 =head1 DESCRIPTION
 
-This program collects ARP data for Netdisco from devices without full SNMP
-support. Currently, ARP tables can be retrieved from the following device
-classes:
+Collects ARP data for Netdisco from devices without full SNMP support.
+Currently, ARP tables can be retrieved from the following device classes:
 
 =over 4
 
