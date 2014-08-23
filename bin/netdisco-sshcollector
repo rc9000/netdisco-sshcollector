@@ -150,71 +150,87 @@ http://dev.perl.org/licenses/artistic.html
 use warnings;
 use strict;
 
-use FindBin;
-use lib (
-    "$FindBin::Bin/../",
-    "$FindBin::Bin/../lib",
-    "$FindBin::Bin/../git/perllib"
-);
+our $home;
+
+BEGIN {
+  use FindBin;
+  FindBin::again();
+
+  $home = ($ENV{NETDISCO_HOME} || $ENV{HOME});
+
+  # try to find a localenv if one isn't already in place.
+  if (!exists $ENV{PERL_LOCAL_LIB_ROOT}) {
+      use File::Spec;
+      my $localenv = File::Spec->catfile($FindBin::RealBin, 'localenv');
+      exec($localenv, $0, @ARGV) if -f $localenv;
+      $localenv = File::Spec->catfile($home, 'perl5', 'bin', 'localenv');
+      exec($localenv, $0, @ARGV) if -f $localenv;
+
+      die "Sorry, can't find libs required for App::Netdisco.\n"
+        if !exists $ENV{PERLBREW_PERL};
+  }
+}
+
+BEGIN {
+  use Path::Class;
+
+  # stuff useful locations into @INC and $PATH
+  unshift @INC,
+    dir($FindBin::RealBin)->parent->subdir('lib')->stringify,
+    dir($FindBin::RealBin, 'lib')->stringify;
+
+  use Config;
+  $ENV{PATH} = $FindBin::RealBin . $Config{path_sep} . $ENV{PATH};
+}
+
+use App::Netdisco;
+use App::Netdisco::Core::Arpnip 'store_arp';
+use App::Netdisco::Util::Node 'check_mac';
+use Dancer ':script';
 
 use Cache::FileCache;
-use Data::Dumper;
+use Data::Printer;
 use Getopt::Long;
-use Module::Load;
+use Module::Load ();
 use Net::OpenSSH;
 use Parallel::ForkManager;
 use Sys::RunAlone;
-use netdisco qw(config add_arp sql_begin sql_commit);
 
 #this may be helpful with SSH issues:
 #$Net::OpenSSH::debug = ~0;
 
-my $namespace = "netdisco-sshcollector";
-my $oconfig = "/usr/share/netdisco/netdisco.conf";
-my $oinput = "../etc/netdisco-sshcollector-hosts.csv";
 my $oworkers = 10;
+my $namespace = "netdisco-sshcollector";
 my $cache = Cache::FileCache->new({namespace => $namespace});
-
 my %stats;
 
 exit main();
 
 sub main {
-
-    GetOptions(
-        "config=s" => \$oconfig,
-        "input=s" => \$oinput,
-        "workers=i" => \$oworkers,
-    );
-
-    die "Can't read netdisco config: $oconfig" unless (-r $oconfig);
-    die "Can't read input file: $oinput" unless (-r $oinput);
-
+    GetOptions( "workers=i" => \$oworkers );
     $cache->clear;
-    my @input = readinput();
 
+    my @input = setting('sshcollector');
     my $pm = Parallel::ForkManager->new($oworkers);
 
-    foreach my $host (@input){
-
+    foreach my $host (@input) {
         my $pid = $pm->start and next;
         my $hostlabel = $host->{hostname} eq "-" ? $host->{ip} : $host->{hostname};
 
         my $ssh = Net::OpenSSH->new(
-                $hostlabel,
-                user => $host->{user},
-                password => $host->{password},
-                timeout => 30,
-                async => 0,
-                master_opts => [
-                        -o => "StrictHostKeyChecking=no",
-                        -o => "BatchMode=no"
-                ],
+            $hostlabel,
+            user => $host->{user},
+            password => $host->{password},
+            timeout => 30,
+            async => 0,
+            master_opts => [
+                -o => "StrictHostKeyChecking=no",
+                -o => "BatchMode=no"
+            ],
         );
 
         process($hostlabel, $ssh, $host);
         $pm->finish;
-
     }
 
     $pm->wait_all_children;
@@ -222,88 +238,47 @@ sub main {
     for my $host ($cache->get_keys()){
         $stats{host}++;
         my $arpentries = $cache->get($host);
-        print $host . ": " .@${arpentries}. " entries obtained\n";
+        debug sprintf ' [%s] arpnip - retrieved %s entries from %s',
+           scalar @$arpentries, $host;
         store_arpentries($arpentries);
     }
 
-    print "Collected ", $stats{entry}, " arp entries from ", $stats{host}, " hosts\n";
-
+    info sprintf ' [%s] arpnip - processed %s ARP Cache entries',
+        $stats{host}, $stats{entry};
     return 0;
 }
 
 sub process {
-
     my ($hostlabel, $ssh, $args) = @_;
 
     my $class = "Netdisco::SSHCollector::Devices::".$args->{devicetype};
-    load $class;
+    Module::Load::load $class;
 
     my $device = $class->new();
     my @arpentries = $device->arpnip($hostlabel, $ssh, $args);
 
-    #print Dumper \@arpentries;
-
-    if (@arpentries){
-        $cache->set("$hostlabel", \@arpentries)
-    }else{
-        print STDERR "WARNING: no entries received from <$hostlabel>\n";
-
+    debug p @arpentries;
+    if (@arpentries) {
+        $cache->set($hostlabel, \@arpentries)
+    }
+    else {
+        warning "WARNING: no entries received from <$hostlabel>";
     }
 
 }
 
 sub store_arpentries {
-
     my ($arpentries) = @_;
 
-    config($oconfig);
-    sql_begin(['node_ip']);
-
-    foreach my $arpentry(@{$arpentries}){
-
+    foreach my $arpentry ( @$arpentries ) {
         # skip broadcast/vrrp/hsrp and other wierdos
-        next if $arpentry->{mac} =~ /^(ff:ff:ff:ff:ff:ff|0:0:5e:0|0:0:c:7:ac)/i;
+        next unless check_mac( $arpentry->{mac} );
 
-        # normalize separator to ":"
-        $arpentry->{mac} =~ s/\./:/g;
-
-        print "Entry: " . $arpentry->{mac} . " " .  $arpentry->{ip} . "\n";
-        add_arp($arpentry->{mac}, $arpentry->{ip});
+        debug sprintf 'arpnip - stored entry: %s/%s', $arpentry->{mac}, $arpentry->{ip};
+        store_arp({ node => $arpentry->{mac}, ip => $arpentry->{ip} });
 
         $stats{entry}++;
     }
-
-    sql_commit();
-}
-
-sub readinput {
-
-    open(INPUT, $oinput) or die "Failed to open input file $oinput: $!";
-    my @input;
-
-    while(<INPUT>){
-        next if m/^(#|$)/;
-        chomp;
-        my ($hostname, $ip, $user, $password, $devicetype) = split(/\t/);
-
-        if ($devicetype){
-
-            push(@input, {
-                    hostname => $hostname eq "-" ? $ip : $hostname,
-                    ip => $ip,
-                    user => $user, password => $password,
-                    devicetype => $devicetype}
-            );
-        }else{
-            print STDERR "WARNING: illegal input record: $_\n";
-        }
-    }
-
-    unless(@input){
-        die "No valid records in input file $oinput" ;
-    }
-
-    return @input;
 }
 
 __END__
