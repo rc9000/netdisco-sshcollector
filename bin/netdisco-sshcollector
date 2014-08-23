@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4:
 
@@ -29,19 +29,10 @@ classes:
 
 The collected arp entries are then directly stored in the netdisco database.
 
-=head1 USAGE
-
-=over 4
-
-=item C<-w workers>
-
-Number of parallel processes launched. 
-
-Parameter defaults to 10.
-
-=back
-
 =head1 CONFIGURATION
+
+The following should go into your Netdisco 2 configuration file, "C<<
+~/environments/deployment.yml >>"
 
 =over 4
 
@@ -102,8 +93,6 @@ B<inetaddr> and B<macaddr> datatypes in PostgreSQL can handle.
 =over 4
 
 =item L<App::Netdisco>
-
-=item L<Cache::FileCache>
 
 =item L<Net::OpenSSH>
 
@@ -171,66 +160,58 @@ use App::Netdisco::Util::Node 'check_mac';
 use App::Netdisco::Util::DNS 'hostnames_resolve_async';
 use Dancer ':script';
 
-use Cache::FileCache;
 use Data::Printer;
-use Getopt::Long;
 use Module::Load ();
 use Net::OpenSSH;
-use Parallel::ForkManager;
 use Sys::RunAlone;
+use MCE::Loop Sereal => 1;
 
 #this may be helpful with SSH issues:
 #$Net::OpenSSH::debug = ~0;
 
-my $oworkers = 10;
-my $namespace = "netdisco-sshcollector";
-my $cache = Cache::FileCache->new({namespace => $namespace});
+MCE::Loop::init { chunk_size => 1 };
 my %stats;
 
 exit main();
 
 sub main {
-    GetOptions( "workers=i" => \$oworkers );
-    $cache->clear;
-
     my @input = @{ setting('sshcollector') };
-    my $pm = Parallel::ForkManager->new($oworkers);
 
-    foreach my $host (@input) {
+    my @mce_result = mce_loop {
+        my ($mce, $chunk_ref, $chunk_id) = @_;
+        my $host = $chunk_ref->[0];
+
         my $hostlabel = (!defined $host->{hostname} or $host->{hostname} eq "-")
             ? $host->{ip} : $host->{hostname};
-        next unless $hostlabel;
-        my $pid = $pm->start and next;
 
-        my $ssh = Net::OpenSSH->new(
-            $hostlabel,
-            user => $host->{user},
-            password => $host->{password},
-            timeout => 30,
-            async => 0,
-            master_opts => [
-                -o => "StrictHostKeyChecking=no",
-                -o => "BatchMode=no"
-            ],
-        );
+        if ($hostlabel) {
+            my $ssh = Net::OpenSSH->new(
+                $hostlabel,
+                user => $host->{user},
+                password => $host->{password},
+                timeout => 30,
+                async => 0,
+                master_opts => [
+                    -o => "StrictHostKeyChecking=no",
+                    -o => "BatchMode=no"
+                ],
+            );
 
-        process($hostlabel, $ssh, $host);
-        $pm->finish;
-    }
+            MCE->gather( process($hostlabel, $ssh, $host) );
+        }
+    } \@input;
 
-    $pm->wait_all_children;
-    return 0 unless $cache->get_keys();
+    return 0 unless scalar @mce_result;
 
-    foreach my $host ($cache->get_keys()){
+    foreach my $host (@mce_result) {
         $stats{host}++;
-        my $arpentries = $cache->get($host);
-        debug sprintf ' [%s] arpnip - retrieved %s entries',
-           $host, scalar @$arpentries;
-        store_arpentries($arpentries);
+        info sprintf ' [%s] arpnip - retrieved %s entries',
+            $host->[0], scalar @{$host->[1]};
+        store_arpentries($host->[1]);
     }
 
-    info sprintf ' [id: %s] arpnip - processed %s ARP Cache entries',
-        $stats{host}, $stats{entry};
+    info sprintf 'arpnip - processed %s ARP Cache entries from %s devices',
+        $stats{entry}, $stats{host};
     return 0;
 }
 
@@ -243,15 +224,14 @@ sub process {
     my $device = $class->new();
     my $arpentries = [ $device->arpnip($hostlabel, $ssh, $args) ];
 
-    debug p $arpentries;
+    # debug p $arpentries;
     if (scalar @$arpentries) {
-        $arpentries = hostnames_resolve_async($arpentries);
-        $cache->set($hostlabel, $arpentries)
+        hostnames_resolve_async($arpentries);
+        return [$hostlabel, $arpentries];
     }
     else {
         warning "WARNING: no entries received from <$hostlabel>";
     }
-
 }
 
 sub store_arpentries {
@@ -261,8 +241,13 @@ sub store_arpentries {
         # skip broadcast/vrrp/hsrp and other wierdos
         next unless check_mac( undef, $arpentry->{mac} );
 
-        debug sprintf 'arpnip - stored entry: %s / %s', $arpentry->{mac}, $arpentry->{ip};
-        store_arp({ node => $arpentry->{mac}, ip => $arpentry->{ip}, dns => $arpentry->{dns} });
+        debug sprintf '  arpnip - stored entry: %s / %s',
+            $arpentry->{mac}, $arpentry->{ip};
+        store_arp({
+            node => $arpentry->{mac},
+            ip => $arpentry->{ip},
+            dns => $arpentry->{dns},
+        });
 
         $stats{entry}++;
     }
