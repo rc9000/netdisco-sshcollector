@@ -9,13 +9,13 @@ without full SNMP support
 
 =head1 SYNOPSIS
 
-    netdisco-sshcollector [-i inputfile] [-c netdisco_config] [-w workers]
+    netdisco-sshcollector [-w workers]
 
 =head1 DESCRIPTION
 
-This program collects ARP data for Netdisco from devices without
-full SNMP support. Currently, ARP tables can be retrieved from the
-following device classes:
+This program collects ARP data for Netdisco from devices without full SNMP
+support. Currently, ARP tables can be retrieved from the following device
+classes:
 
 =over 4
 
@@ -23,38 +23,15 @@ following device classes:
 
 =item * C<Netdisco::SSHCollector::Devices::BigIP> - F5 Networks BigIP
 
+=item * C<Netdisco::SSHCollector::Devices::IOS> - Cisco IOS
+
 =back
 
-The collected arp entries are then directly stored in the netdisco
-database.
+The collected arp entries are then directly stored in the netdisco database.
 
 =head1 USAGE
 
 =over 4
-
-=item C<-i inputfile>
-
-Data is collected from the machines specified in this file. The
-format is five tab-separated columns: hostname, ipaddress,
-username, password, devicetpye. Blank lines and lines with a
-leading # are ignored.
-
-Devicetype is the final part of the classname to be instantiated
-to query the host, e.g. devicetype B<ACE> will be queried using 
-C<Netdisco::SSHCollector::Devices::ACE>.
-
-If the hostname is "-", the SSH session will be established using the
-ip address.
-If the password is "-", public key authentication will be attempted.
-
-Parameter defaults to ../etc/netdisco-sshcollector-hosts.csv.
-
-=item C<-c netdisco_config>
-
-Used to find the database of the local netdisco installation.
-
-Parameter defaults to /usr/share/netdisco/netdisco.conf.
-
 
 =item C<-w workers>
 
@@ -64,88 +41,90 @@ Parameter defaults to 10.
 
 =back
 
-=head1 INPUT FILE EXAMPLE
+=head1 CONFIGURATION
 
- #hostname      ipaddress       user    password        devicetype
- host1  10.0.0.1        bob     $ecret77        BigIP
- -      10.0.1.5        alice   -       ACE
+=over 4
+
+=item C<sshcollector>
+
+Data is collected from the machines specified in this setting. The format is a
+list of dictionaries. The keys C<ip>, C<user>, C<password>, and C<devicetype>
+are required.  Optionally the C<hostname> key can be used instead of the
+C<ip>. For example:
+
+ sshcollector:
+   - ip: '192.0.2.1'
+     user: oliver
+     password: letmein
+     devicetype: IOS
+   - hostname: 'core-router.example.com'
+     user: oliver
+     password: letmein
+     devicetype: IOS
+
+Devicetype is the final part of the classname to be instantiated to query the
+host, e.g. devicetype B<ACE> will be queried using
+C<Netdisco::SSHCollector::Devices::ACE>.
+
+If the password is "-", public key authentication will be attempted.
+
+=back
 
 =head1 ADDING DEVICES
 
-Additional device classes can be easily integrated just by adding
-and additonal class to the C<Netdisco::SSHCollector::Devices> package. 
-This class must implement an C<arpnip($hostname, $ssh)> method which 
-returns an array of hashrefs in the format
+Additional device classes can be easily integrated just by adding and
+additonal class to the C<Netdisco::SSHCollector::Devices> package.  This class
+must implement an C<arpnip($hostname, $ssh)> method which returns an array of
+hashrefs in the format
 
-   @result = ({ ip => IPADDR, mac => MACADDR }, ...) 
+ @result = ({ ip => IPADDR, mac => MACADDR }, ...) 
 
-The parameter C<$ssh> is an active C<Net::OpenSSH> connection to the 
-host. Depending on the target system, it can be queried using simple
-methods like
+The parameter C<$ssh> is an active C<Net::OpenSSH> connection to the host.
+Depending on the target system, it can be queried using simple methods like
 
-   my @data = $ssh->capture("show whatever")
-or automated via Expect - this is mostly useful for non-Linux 
-appliances which don't support command execution via ssh:
+ my @data = $ssh->capture("show whatever")
 
-    my ($pty, $pid) = $ssh->open2pty or die "unable to run remote command";
-    my $expect = Expect->init($pty);
-    my $prompt = qr/#/;
-    my ($pos, $error, $match, $before, $after) = $expect->expect(10, -re, $prompt);
-    $expect->send("terminal length 0\n");
+or automated via Expect - this is mostly useful for non-Linux appliances which
+don't support command execution via ssh:
 
-    # etc...
+ my ($pty, $pid) = $ssh->open2pty or die "unable to run remote command";
+ my $expect = Expect->init($pty);
+ my $prompt = qr/#/;
+ my ($pos, $error, $match, $before, $after) = $expect->expect(10, -re, $prompt);
+ $expect->send("terminal length 0\n");
+ # etc...
 
-The returned IP and MAC addresses should be in a format that the 
-respective B<inetaddr> and B<macaddr> datatypes in PostgreSQL can
-handle.   
-
-
+The returned IP and MAC addresses should be in a format that the respective
+B<inetaddr> and B<macaddr> datatypes in PostgreSQL can handle.   
 
 =head1 DEPENDENCIES
 
 =over 4
 
-=item C<Cache::Cache>
+=item L<App::Netdisco>
 
-=item C<Net::OpenSSH>
+=item L<Cache::FileCache>
 
-=item C<Module::Load>
+=item L<Net::OpenSSH>
 
-=item C<Parallel::ForkManager>
+=item L<Parallel::ForkManager>
 
-=item C<Sys::RunAlone>
-
-=item C<netdisco>
+=item L<Sys::RunAlone>
 
 =back
-
-The non-netdisco modules can be obtained from CPAN. Alternatively if you
-can't use CPAN and your distro doesn't provide these packages, you can
-add the C<cpanlib> directory to C<PERLLIB>, it contains fairly recent
-versions of all dependencies. These are all pure Perl modules which
-should work on any platform.
-
-The module netdisco.pm comes with the netdisco installation.
-
-It is likely necessary to add the netdisco base directory
-(containing netdisco and netdisco.pm) to PERLLIB or the
-B<use lib> statement.
-
-
 
 =head1 COPYRIGHT AND LICENSE
 
 Copyright (C) 2013 by Christian Ramseyer (ramseyer@netnea.com)
+Copyright (C) 2013 by the Netdisco Project
 
-This library is free software; you can redistribute it and/or modify it under 
-the same terms as Perl itself, either Perl version 5.10.0 or, at your option, 
+This library is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself, either Perl version 5.10.0 or, at your option,
 any later version of Perl 5 you may have available.
 
 http://dev.perl.org/licenses/artistic.html
 
 =cut
-
-
 
 use warnings;
 use strict;
