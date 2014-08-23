@@ -115,8 +115,8 @@ B<inetaddr> and B<macaddr> datatypes in PostgreSQL can handle.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2013 by Christian Ramseyer (ramseyer@netnea.com)
-Copyright (C) 2013 by the Netdisco Project
+ Copyright (C) 2013 by Christian Ramseyer (ramseyer@netnea.com)
+ Copyright (C) 2013 by the Netdisco Project
 
 This library is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself, either Perl version 5.10.0 or, at your option,
