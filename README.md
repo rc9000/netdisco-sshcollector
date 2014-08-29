@@ -13,8 +13,9 @@ This program collects ARP data for Netdisco from devices without
 full SNMP support. Currently, ARP tables can be retrieved from the
 following device classes:
 
-- `Netdisco::SSHCollector::Devices::ACE` - Cisco ACE (Application Control Engine) 
+- `Netdisco::SSHCollector::Devices::ACE` - Cisco ACE
 - `Netdisco::SSHCollector::Devices::BigIP` - F5 Networks BigIP
+- `Netdisco::SSHCollector::Devices::IOSXR` - Cisco IOS XR 
 
 The collected arp entries are then directly stored in the netdisco
 database.
@@ -54,9 +55,9 @@ database.
 
 # INPUT FILE EXAMPLE
 
-    #hostname      ipaddress       user    password        devicetype
-    host1  10.0.0.1        bob     $ecret77        BigIP
-    -      10.0.1.5        alice   -       ACE
+    #host	ipaddress	user	password	devicetype
+    host1	10.0.0.1	bob	$ecret77	BigIP
+    -	10.0.1.5	alice	-	ACE
 
 # ADDING DEVICES
 
@@ -116,15 +117,51 @@ __use lib__ statement.
 
 
 
+# AUTHOR
+
+Christian Ramseyer, netnea ag, <ramseyer at netnea dot com>
+
+# CREDITS
+
+- __Oliver Gorwits__ <oliver at cpan dot org> made the Netdisco2 port and 
+included it in the main distribution
+- __Claes Jansson__ <claes at gastabud dot com> contributed the IOSXR module
+- __Jiri Dvorak__ <jiri at netnea dot com> and __Charles Bueche__
+<bueche at netnea dot com> provided valuable feedback and cookies.
+
 # COPYRIGHT AND LICENSE
 
-Copyright (C) 2013 by Christian Ramseyer (ramseyer@netnea.com)
+    This software is copyright (c) 2013 by The Netdisco Developer Team.
 
-This library is free software; you can redistribute it and/or modify it under 
-the same terms as Perl itself, either Perl version 5.10.0 or, at your option, 
-any later version of Perl 5 you may have available.
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are met:
+        * Redistributions of source code must retain the above copyright
+          notice, this list of conditions and the following disclaimer.
+        * Redistributions in binary form must reproduce the above copyright
+          notice, this list of conditions and the following disclaimer in the
+          documentation and/or other materials provided with the distribution.
+        * Neither the name of the Netdisco Project nor the
+          names of its contributors may be used to endorse or promote products
+          derived from this software without specific prior written permission.
+    
 
-http://dev.perl.org/licenses/artistic.html
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+    DISCLAIMED. IN NO EVENT SHALL THE NETDISCO DEVELOPER TEAM BE LIABLE FOR ANY
+    DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+    ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+
+    When redistributing netdisco-sshcollector, please note that the Perl modules in
+    the cpanlib directory are subject to their own individual license terms.
+
+
 ***
 # POD of module lib/Netdisco/SSHCollector/Devices/ACE.pm
 ***
@@ -171,6 +208,27 @@ These devices also feature a CLI interface similar to IOS, which can
 either be set as the login shell of the user, or be called from an
 ordinary shell. This module assumes the former, and if "show net arp"
 can't be executed, falls back to the latter.
+
+# PUBLIC METHODS
+
+- __arpnip($host, $ssh)__
+
+    Retrieve ARP entries from device. `$host` is the hostname or IP address
+    of the device. `$ssh` is a Net::OpenSSH connection to the device.
+
+    Returns an array of hashrefs in the format { mac => MACADDR, ip => IPADDR }.
+
+
+***
+# POD of module lib/Netdisco/SSHCollector/Devices/IOSXR.pm
+***
+# NAME
+
+App::Netdisco::SSHCollector::Platform::IOSXR
+
+# DESCRIPTION
+
+Collect ARP entries from Cisco IOS XR devices.
 
 # PUBLIC METHODS
 
