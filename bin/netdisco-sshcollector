@@ -143,13 +143,13 @@ Christian Ramseyer, netnea ag, <ramseyer at netnea dot com>
 
 =over 4
 
-=item B<Oliver Gorwits> <oliver at cpan dot org> made the Netdisco2 port and 
+=item B<Oliver Gorwits> E<lt>oliver at cpan dot orgE<gt> made the Netdisco2 port and 
 included it in the main distribution
 
-=item B<Claes Jansson> <claes at gastabud dot com> contributed the IOSXR module
+=item B<Claes Jansson> E<lt>Claes at gastabud dot comE<gt> contributed the IOSXR module
 
-=item B<Jiri Dvorak> <jiri at netnea dot com> and B<Charles Bueche>
-<bueche at netnea dot com> provided valuable feedback and cookies.
+=item B<Jiri Dvorak> E<lt>jiri at netnea dot comE<gt> and B<Charles Bueche>
+E<lt>bueche at netnea dot comE<gt> provided valuable feedback and cookies.
 
 =back
 
