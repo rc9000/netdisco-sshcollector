@@ -53,7 +53,9 @@ sub arpnip {
     # 0.0.0.0     00:00:00   0000.0000.0000  Dynamic    ARPA  GigabitEthernet0/0/0/0
     for (split(/\n/, $before)){
         my ($ip, $age, $mac, $state, $t, $iface) = split(/\s+/);
-        if ($ip =~ m/(\d{1,3}\.){3}\d{1,3}/ && $mac =~ m/[0-9a-f.]+/i) {
+
+
+        if ($ip =~ m/(\d{1,3}\.){3}\d{1,3}/ && $mac =~ m/([0-9a-f]{4}\.){2}[0-9a-f]{4}/i) {
             push(@arpentries, { ip => $ip, mac => $mac });
         }
     }
