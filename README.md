@@ -1,3 +1,7 @@
+# READ THIS FIRST
+
+netdisco-sshcollector is now a part of Netdisco 2. Unless you want to do some legacy ARP collection in 1.x, head over to https://metacpan.org/pod/App::Netdisco and follow the instructions there.
+
 # NAME
 
 netdisco-sshcollector - Collect ARP data for Netdisco from devices
